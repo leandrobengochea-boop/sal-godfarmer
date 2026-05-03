@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAL Analyzer — Godfarmer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f1efe8;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
+    --teal: #1D9E75; --teal-bg: #E1F5EE; --teal-text: #0F6E56;
+    --blue: #378ADD; --blue-bg: #E6F1FB; --blue-text: #185FA5;
+    --gray-bg: #F1EFE8; --gray-text: #5F5E5A;
+    --coral: #D85A30; --coral-bg: #FAECE7; --coral-text: #993C1D;
+    --amber: #EF9F27;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 2rem; height: 54px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 28px; height: 28px; background: #1a1a18; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .logo-text { font-size: 14px; font-weight: 500; }
+  .header-right { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 10px; }
+  .key-status { font-size: 11px; padding: 3px 8px; border-radius: 99px; cursor: pointer; }
+  .key-ok { background: var(--teal-bg); color: var(--teal-text); }
+  .key-missing { background: var(--coral-bg); color: var(--coral-text); }
+
+  .key-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+  .key-modal.open { display: flex; }
+  .key-box { background: var(--surface); border-radius: 14px; padding: 2rem; width: 100%; max-width: 440px; margin: 1rem; }
+  .key-box h2 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .key-box p { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+  .key-box a { color: var(--blue); text-decoration: none; }
+  .key-input { width: 100%; padding: 10px 12px; font-size: 13px; font-family: monospace; border: 0.5px solid var(--border2); border-radius: 8px; outline: none; background: var(--bg); color: var(--text); margin-bottom: 12px; }
+  .key-input:focus { border-color: rgba(0,0,0,0.35); }
+  .key-btn { width: 100%; padding: 10px; font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 8px; border: none; background: #1a1a18; color: #fff; }
+  .key-btn:hover { background: #333; }
+
+  main { max-width: 980px; width: 100%; margin: 0 auto; padding: 2rem 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+  @media (max-width: 680px) { main { grid-template-columns: 1fr; padding: 1rem; } }
+
+  .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .panel-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); margin-bottom: 1rem; }
+
+  textarea { width: 100%; min-height: 280px; resize: vertical; font-size: 13px; line-height: 1.65; font-family: inherit; color: var(--text); background: var(--bg); border: 0.5px solid var(--border2); border-radius: 8px; padding: 12px 14px; outline: none; transition: border-color 0.15s; }
+  textarea:focus { border-color: rgba(0,0,0,0.35); }
+  textarea::placeholder { color: var(--text3); }
+
+  .btn { margin-top: 12px; width: 100%; padding: 11px 16px; font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 8px; border: none; background: #1a1a18; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn:hover { background: #333; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  .loading .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .crit-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px; border: 0.5px solid var(--border); border-radius: 8px; margin-bottom: 5px; }
+  .crit-icon { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .icon-yes { background: var(--teal); }
+  .icon-no  { background: var(--surface2); border: 1.5px solid var(--border2); }
+  .icon-par { background: var(--amber); }
+  .crit-body { flex: 1; min-width: 0; }
+  .crit-name { font-size: 13px; color: var(--text); }
+  .crit-note { font-size: 12px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+  .crit-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .pbadge { font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 99px; white-space: nowrap; }
+  .ptsval { font-size: 12px; font-weight: 500; color: var(--text3); }
+  .ptsval.earned { color: var(--teal); }
+
+  .score-block { background: var(--surface2); border-radius: 12px; padding: 1.25rem; margin: 1rem 0; }
+  .score-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+  .score-big { font-size: 36px; font-weight: 500; }
+  .score-denom { font-size: 15px; color: var(--text2); }
+  .score-nivel { font-size: 13px; font-weight: 500; margin-left: 4px; }
+  .bar-outer { height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; margin-bottom: 8px; }
+  .bar-fill { height: 100%; border-radius: 99px; width: 0%; transition: width 0.6s ease, background 0.4s; }
+  .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); }
+
+  .nivel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .nivel-card { border-radius: 8px; border: 0.5px solid var(--border); padding: 10px 11px; transition: border 0.3s; }
+  .ntag { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 99px; display: inline-block; margin-bottom: 5px; }
+  .ntitle { font-size: 12px; font-weight: 500; color: var(--text); margin: 0 0 2px; }
+  .nrange { font-size: 11px; color: var(--text2); margin: 0 0 4px; }
+  .ndesc  { font-size: 11px; color: var(--text2); line-height: 1.4; }
+
+  .gaps-box { padding: 10px 13px; border-radius: 8px; font-size: 12px; background: var(--coral-bg); color: #712B13; border: 0.5px solid #F5C4B3; line-height: 1.9; }
+  .gaps-box strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; text-align: center; color: var(--text3); border: 0.5px dashed var(--border2); border-radius: 12px; min-height: 220px; gap: 10px; }
+  .empty-state p { font-size: 13px; }
+  .error-box { margin-top: 10px; padding: 10px 12px; background: var(--coral-bg); color: var(--coral-text); border: 0.5px solid #F5C4B3; border-radius: 8px; font-size: 12px; line-height: 1.5; }
+  .empresa-tag { font-size: 15px; font-weight: 500; margin-bottom: 1rem; }
+  .result-panel { display: none; }
+  .result-panel.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="key-modal" id="key-modal">
+  <div class="key-box">
+    <h2>Configurar chave da API</h2>
+    <p>Cole sua chave do Google AI Studio. É gratuita e fica salva só neste navegador.<br><a href="https://aistudio.google.com" target="_blank">Pegar chave gratuita →</a></p>
+    <input class="key-input" id="key-input" type="password" placeholder="AIza..." />
+    <button class="key-btn" id="key-save">Salvar e continuar</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="5" height="5" rx="1" fill="white"/>
+        <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.5"/>
+        <rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.5"/>
+        <rect x="9" y="9" width="5" height="5" rx="1" fill="white"/>
+      </svg>
+    </div>
+    <span class="logo-text">SAL Analyzer</span>
+  </div>
+  <div class="header-right">
+    <span>Godfarmer · Profissionais SA</span>
+    <span class="key-status" id="key-status" onclick="openKeyModal()">⚙ API Key</span>
+  </div>
+</header>
+
+<main>
+  <div class="panel">
+    <p class="panel-title">Modelo de qualificação</p>
+    <textarea id="input" placeholder="Cole aqui o texto da qualificação..."></textarea>
+    <button class="btn" id="btn">
+      <span class="spinner"></span>
+      <span id="btn-label">Analisar qualificação</span>
+    </button>
+    <div id="error-area"></div>
+  </div>
+
+  <div>
+    <div id="empty-panel">
+      <div class="empty-state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="3" y="3" width="11" height="11" rx="2.5" fill="#D3D1C7"/>
+          <rect x="18" y="3" width="11" height="11" rx="2.5" fill="#D3D1C7" opacity="0.45"/>
+          <rect x="3" y="18" width="11" height="11" rx="2.5" fill="#D3D1C7" opacity="0.45"/>
+          <rect x="18" y="18" width="11" height="11" rx="2.5" fill="#D3D1C7"/>
+        </svg>
+        <p>Cole a qualificação ao lado<br>e clique em analisar</p>
+      </div>
+    </div>
+    <div class="panel result-panel" id="result-panel">
+      <p class="panel-title">Resultado</p>
+      <p class="empresa-tag" id="empresa-nome"></p>
+      <div id="crit-list"></div>
+      <div class="score-block">
+        <div class="score-row">
+          <span class="score-big" id="score-num">0</span>
+          <span class="score-denom">/ 12 pts</span>
+          <span class="score-nivel" id="nivel-label"></span>
+        </div>
+        <div class="bar-outer"><div class="bar-fill" id="bar-fill"></div></div>
+        <div class="ticks"><span>0</span><span>5</span><span>8</span><span style="margin-left:auto">12</span></div>
+      </div>
+      <div class="nivel-grid">
+        <div class="nivel-card" id="n-rej">
+          <span class="ntag" style="background:var(--coral-bg);color:var(--coral-text);">Não aceito</span>
+          <p class="ntitle">SAL rejeitado</p><p class="nrange">0 – 5 pts</p><p class="ndesc">Retorna ao farmer.</p>
+        </div>
+        <div class="nivel-card" id="n-cond">
+          <span class="ntag" style="background:var(--blue-bg);color:var(--blue-text);">Condicional</span>
+          <p class="ntitle">SAL condicional</p><p class="nrange">6 – 8 pts</p><p class="ndesc">Avança com ressalvas.</p>
+        </div>
+        <div class="nivel-card" id="n-hot">
+          <span class="ntag" style="background:var(--teal-bg);color:var(--teal-text);">Aceito</span>
+          <p class="ntitle">SAL qualificado</p><p class="nrange">9 – 12 pts</p><p class="ndesc">Handoff autorizado.</p>
+        </div>
+      </div>
+      <div id="gaps-area"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CRITERIA = [
+  { id:'reuniao',      label:'Reunião agendada',                             peso:1, pts:3, pc:'var(--teal-bg)',  pt:'var(--teal-text)' },
+  { id:'tempo',        label:'Tempo de compra 45 dias',                      peso:1, pts:3, pc:'var(--teal-bg)',  pt:'var(--teal-text)' },
+  { id:'data_evento',  label:'Data do evento até 6 meses pós qualificação',  peso:2, pts:2, pc:'var(--blue-bg)',  pt:'var(--blue-text)' },
+  { id:'historico',    label:'Histórico de contratação',                     peso:2, pts:2, pc:'var(--blue-bg)',  pt:'var(--blue-text)' },
+  { id:'qualif',       label:'Qualificação completa (local, tema, público)', peso:3, pts:1, pc:'var(--gray-bg)',  pt:'var(--gray-text)' },
+  { id:'investimento', label:'Faixa de investimento informada',              peso:3, pts:1, pc:'var(--gray-bg)',  pt:'var(--gray-text)' },
+];
+
+function getKey() { return localStorage.getItem('gemini_key') || ''; }
+function setKey(k) { localStorage.setItem('gemini_key', k); updateKeyStatus(); }
+
+function updateKeyStatus() {
+  const el = document.getElementById('key-status');
+  if (getKey()) { el.textContent = '✓ API Key'; el.className = 'key-status key-ok'; }
+  else { el.textContent = '⚠ Configurar API Key'; el.className = 'key-status key-missing'; }
+}
+
+function openKeyModal() {
+  document.getElementById('key-input').value = getKey();
+  document.getElementById('key-modal').classList.add('open');
+}
+
+document.getElementById('key-save').addEventListener('click', () => {
+  const k = document.getElementById('key-input').value.trim();
+  if (!k) return;
+  setKey(k);
+  document.getElementById('key-modal').classList.remove('open');
+});
+
+document.getElementById('key-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('key-modal'))
+    document.getElementById('key-modal').classList.remove('open');
+});
+
+updateKeyStatus();
+if (!getKey()) openKeyModal();
+
+function extrairEmpresa(t) {
+  const m = t.match(/empresa[:\s]+([^\n]+)/i) || t.match(/🏢[^\n]*\n([^\n]+)/);
+  return m ? m[1].trim() : 'Lead qualificado';
+}
+
+document.getElementById('btn').addEventListener('click', async () => {
+  const texto = document.getElementById('input').value.trim();
+  if (!texto) return;
+
+  const apiKey = getKey();
+  if (!apiKey) { openKeyModal(); return; }
+
+  const btn = document.getElementById('btn');
+  const lbl = document.getElementById('btn-label');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  lbl.textContent = 'Analisando...';
+  document.getElementById('error-area').innerHTML = '';
+  document.getElementById('result-panel').classList.remove('visible');
+  document.getElementById('empty-panel').style.display = 'block';
+
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const prompt = `Analise o texto de qualificação de lead abaixo e retorne SOMENTE um objeto JSON válido (sem markdown, sem texto extra).
+
+Critérios:
+- reuniao: reunião, call ou meet agendado com o cliente
+- tempo: decisão de compra em até 45 dias declarada EXPLICITAMENTE
+- data_evento: data do evento informada E dentro de 6 meses a partir de hoje (${hoje})
+- historico: evidência de contratação anterior de palestrantes
+- qualif: local (não "a confirmar"), tema E público — todos três presentes
+- investimento: orçamento ou faixa de valor mencionado
+
+Formato exato:
+{"reuniao":{"presente":bool,"parcial":bool,"motivo":"até 12 palavras"},"tempo":{"presente":bool,"parcial":bool,"motivo":"até 12 palavras"},"data_evento":{"presente":bool,"parcial":bool,"motivo":"até 12 palavras"},"historico":{"presente":bool,"parcial":bool,"motivo":"até 12 palavras"},"qualif":{"presente":bool,"parcial":bool,"motivo":"até 12 palavras"},"investimento":{"presente":bool,"parcial":bool,"motivo":"até 12 palavras"}}
+
+Regras: tempo=true SOMENTE com prazo explícito; qualif local ausente ou "a confirmar" → presente=false, parcial=true. Retorne apenas o JSON.
+
+Texto:
+${texto}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+        })
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Erro ${res.status} — verifique sua API key`);
+    }
+
+    const data = await res.json();
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Resposta inválida da IA.');
+    renderResult(JSON.parse(match[0]), texto);
+
+  } catch(e) {
+    document.getElementById('error-area').innerHTML = `<div class="error-box">Erro: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    lbl.textContent = 'Analisar qualificação';
+  }
+});
+
+function renderResult(analysis, textoOriginal) {
+  document.getElementById('empresa-nome').textContent = extrairEmpresa(textoOriginal);
+  const list = document.getElementById('crit-list');
+  list.innerHTML = '';
+  let total = 0;
+  const gaps = [];
+
+  CRITERIA.forEach(c => {
+    const r = analysis[c.id] || { presente: false, parcial: false, motivo: '' };
+    if (r.presente) total += c.pts;
+    else gaps.push(r.parcial ? `<em>${c.label} (parcial)</em>: ${r.motivo}` : `${c.label}: ${r.motivo}`);
+    const cls = r.presente ? 'icon-yes' : r.parcial ? 'icon-par' : 'icon-no';
+    const icon = r.presente
+      ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+      : r.parcial
+      ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><line x1="2" y1="5" x2="8" y2="5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`
+      : '';
+    const earned = r.presente ? c.pts : 0;
+    const row = document.createElement('div');
+    row.className = 'crit-row';
+    row.innerHTML = `
+      <div class="crit-icon ${cls}">${icon}</div>
+      <div class="crit-body">
+        <div class="crit-name">${c.label}</div>
+        ${r.motivo ? `<div class="crit-note">${r.motivo}</div>` : ''}
+      </div>
+      <div class="crit-right">
+        <span class="pbadge" style="background:${c.pc};color:${c.pt}">peso ${c.peso}</span>
+        <span class="ptsval ${earned > 0 ? 'earned' : ''}">${earned}/${c.pts} pts</span>
+      </div>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('score-num').textContent = total;
+  const bar = document.getElementById('bar-fill');
+  bar.style.width = Math.round((total / 12) * 100) + '%';
+  const [nRej, nCond, nHot] = ['n-rej','n-cond','n-hot'].map(id => document.getElementById(id));
+  [nRej, nCond, nHot].forEach(n => n.style.border = '0.5px solid var(--border)');
+  const lbl = document.getElementById('nivel-label');
+  if (total <= 5) {
+    bar.style.background = 'var(--coral)'; lbl.textContent = '— rejeitado'; lbl.style.color = 'var(--coral-text)';
+    nRej.style.border = '2px solid var(--coral)';
+  } else if (total <= 8) {
+    bar.style.background = 'var(--blue)'; lbl.textContent = '— condicional'; lbl.style.color = 'var(--blue-text)';
+    nCond.style.border = '2px solid var(--blue)';
+  } else {
+    bar.style.background = 'var(--teal)'; lbl.textContent = '— qualificado'; lbl.style.color = 'var(--teal-text)';
+    nHot.style.border = '2px solid var(--teal)';
+  }
+  const gDiv = document.getElementById('gaps-area');
+  gDiv.innerHTML = gaps.length
+    ? `<div class="gaps-box"><strong>Lacunas — endereçar antes do handoff</strong>${gaps.join('<br>')}</div>`
+    : '';
+  document.getElementById('empty-panel').style.display = 'none';
+  document.getElementById('result-panel').classList.add('visible');
+}
+</script>
+</body>
+</html>
